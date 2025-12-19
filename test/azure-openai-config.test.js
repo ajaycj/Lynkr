@@ -10,6 +10,13 @@ describe("Azure OpenAI Configuration Tests", () => {
 
     // Store original config
     originalConfig = { ...process.env };
+
+    // Set Azure OpenAI environment variables to empty strings to override .env values
+    // (deleting them would cause dotenv to reload from .env file)
+    process.env.AZURE_OPENAI_ENDPOINT = "";
+    process.env.AZURE_OPENAI_API_KEY = "";
+    process.env.AZURE_OPENAI_DEPLOYMENT = "";
+    process.env.AZURE_OPENAI_API_VERSION = "";
   });
 
   afterEach(() => {
@@ -38,8 +45,9 @@ describe("Azure OpenAI Configuration Tests", () => {
     it("should use default values when optional fields not set", () => {
       process.env.AZURE_OPENAI_ENDPOINT = "https://test-resource.openai.azure.com";
       process.env.AZURE_OPENAI_API_KEY = "test-api-key";
-      delete process.env.AZURE_OPENAI_DEPLOYMENT;
-      delete process.env.AZURE_OPENAI_API_VERSION;
+      // Keep as empty strings (don't delete) to prevent dotenv from reloading
+      process.env.AZURE_OPENAI_DEPLOYMENT = "";
+      process.env.AZURE_OPENAI_API_VERSION = "";
       process.env.MODEL_PROVIDER = "databricks";
       process.env.DATABRICKS_API_KEY = "test-key";
       process.env.DATABRICKS_API_BASE = "http://test.com";
@@ -51,8 +59,9 @@ describe("Azure OpenAI Configuration Tests", () => {
     });
 
     it("should load null values when Azure OpenAI not configured", () => {
-      delete process.env.AZURE_OPENAI_ENDPOINT;
-      delete process.env.AZURE_OPENAI_API_KEY;
+      // Keep as empty strings (don't delete) to prevent dotenv from reloading
+      process.env.AZURE_OPENAI_ENDPOINT = "";
+      process.env.AZURE_OPENAI_API_KEY = "";
       process.env.MODEL_PROVIDER = "databricks";
       process.env.DATABRICKS_API_KEY = "test-key";
       process.env.DATABRICKS_API_BASE = "http://test.com";
@@ -79,7 +88,7 @@ describe("Azure OpenAI Configuration Tests", () => {
 
     it("should throw error when azure-openai is primary provider without endpoint", () => {
       process.env.MODEL_PROVIDER = "azure-openai";
-      delete process.env.AZURE_OPENAI_ENDPOINT;
+      process.env.AZURE_OPENAI_ENDPOINT = ""; // Empty string, not deleted
       process.env.AZURE_OPENAI_API_KEY = "test-api-key";
 
       assert.throws(() => {
@@ -90,7 +99,7 @@ describe("Azure OpenAI Configuration Tests", () => {
     it("should throw error when azure-openai is primary provider without API key", () => {
       process.env.MODEL_PROVIDER = "azure-openai";
       process.env.AZURE_OPENAI_ENDPOINT = "https://test-resource.openai.azure.com";
-      delete process.env.AZURE_OPENAI_API_KEY;
+      process.env.AZURE_OPENAI_API_KEY = ""; // Empty string, not deleted
 
       assert.throws(() => {
         require("../src/config");
@@ -99,8 +108,8 @@ describe("Azure OpenAI Configuration Tests", () => {
 
     it("should throw error when azure-openai is primary provider without both", () => {
       process.env.MODEL_PROVIDER = "azure-openai";
-      delete process.env.AZURE_OPENAI_ENDPOINT;
-      delete process.env.AZURE_OPENAI_API_KEY;
+      process.env.AZURE_OPENAI_ENDPOINT = ""; // Empty string, not deleted
+      process.env.AZURE_OPENAI_API_KEY = ""; // Empty string, not deleted
 
       assert.throws(() => {
         require("../src/config");
@@ -148,9 +157,10 @@ describe("Azure OpenAI Configuration Tests", () => {
   describe("Deployment and API Version Defaults", () => {
     it("should use gpt-4o as default deployment", () => {
       delete process.env.AZURE_OPENAI_DEPLOYMENT;
-      process.env.MODEL_PROVIDER = "databricks";
-      process.env.DATABRICKS_API_KEY = "test-key";
-      process.env.DATABRICKS_API_BASE = "http://test.com";
+      process.env.MODEL_PROVIDER = "azure-openai";
+      process.env.AZURE_OPENAI_ENDPOINT = "https://test-resource.openai.azure.com";
+      process.env.AZURE_OPENAI_API_KEY = "test-api-key";
+      process.env.AZURE_OPENAI_DEPLOYMENT = "gpt-4o";
 
       const config = require("../src/config");
 

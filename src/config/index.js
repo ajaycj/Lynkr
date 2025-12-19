@@ -85,9 +85,10 @@ const openRouterModel = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
 const openRouterEndpoint = process.env.OPENROUTER_ENDPOINT ?? "https://openrouter.ai/api/v1/chat/completions";
 
 // Azure OpenAI configuration
-const azureOpenAIEndpoint = process.env.AZURE_OPENAI_ENDPOINT ?? null;
-const azureOpenAIApiKey = process.env.AZURE_OPENAI_API_KEY ?? null;
-const azureOpenAIDeployment = process.env.AZURE_OPENAI_DEPLOYMENT ?? "gpt-4o";
+const azureOpenAIEndpoint = process.env.AZURE_OPENAI_ENDPOINT?.trim() || null;
+const azureOpenAIApiKey = process.env.AZURE_OPENAI_API_KEY?.trim() || null;
+const azureOpenAIDeployment = process.env.AZURE_OPENAI_DEPLOYMENT?.trim() || "gpt-4o";
+const azureOpenAIApiVersion = process.env.AZURE_OPENAI_API_VERSION?.trim() || "2024-08-01-preview";
 
 
 // Hybrid routing configuration
@@ -349,7 +350,8 @@ const config = {
   azureOpenAI: {
     endpoint: azureOpenAIEndpoint,
     apiKey: azureOpenAIApiKey,
-    deployment: azureOpenAIDeployment
+    deployment: azureOpenAIDeployment,
+    apiVersion: azureOpenAIApiVersion
   },
   modelProvider: {
     type: modelProvider,
