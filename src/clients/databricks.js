@@ -574,6 +574,77 @@ async function invokeLlamaCpp(body) {
   return performJsonRequest(endpoint, { headers, body: llamacppBody }, "llama.cpp");
 }
 
+async function invokeLMStudio(body) {
+  if (!config.lmstudio?.endpoint) {
+    throw new Error("LM Studio endpoint is not configured.");
+  }
+
+  const {
+    convertAnthropicToolsToOpenRouter,
+    convertAnthropicMessagesToOpenRouter
+  } = require("./openrouter-utils");
+
+  const endpoint = `${config.lmstudio.endpoint}/v1/chat/completions`;
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  // Add API key if configured (for secured LM Studio servers)
+  if (config.lmstudio.apiKey) {
+    headers["Authorization"] = `Bearer ${config.lmstudio.apiKey}`;
+  }
+
+  // Convert messages to OpenAI format
+  const messages = convertAnthropicMessagesToOpenRouter(body.messages || []);
+
+  // Handle system message
+  if (body.system) {
+    messages.unshift({ role: "system", content: body.system });
+  }
+
+  const lmstudioBody = {
+    messages,
+    temperature: body.temperature ?? 0.7,
+    max_tokens: body.max_tokens ?? 4096,
+    top_p: body.top_p ?? 1.0,
+    stream: body.stream ?? false
+  };
+
+  // Inject standard tools if client didn't send any
+  let toolsToSend = body.tools;
+  let toolsInjected = false;
+
+  if (!Array.isArray(toolsToSend) || toolsToSend.length === 0) {
+    toolsToSend = STANDARD_TOOLS;
+    toolsInjected = true;
+    logger.info({
+      injectedToolCount: STANDARD_TOOLS.length,
+      injectedToolNames: STANDARD_TOOLS.map(t => t.name),
+      reason: "Client did not send tools (passthrough mode)"
+    }, "=== INJECTING STANDARD TOOLS (LM Studio) ===");
+  }
+
+  if (Array.isArray(toolsToSend) && toolsToSend.length > 0) {
+    lmstudioBody.tools = convertAnthropicToolsToOpenRouter(toolsToSend);
+    lmstudioBody.tool_choice = "auto";
+    logger.info({
+      toolCount: toolsToSend.length,
+      toolNames: toolsToSend.map(t => t.name),
+      toolsInjected
+    }, "=== SENDING TOOLS TO LM STUDIO ===");
+  }
+
+  logger.info({
+    endpoint,
+    hasTools: !!lmstudioBody.tools,
+    toolCount: lmstudioBody.tools?.length || 0,
+    temperature: lmstudioBody.temperature,
+    max_tokens: lmstudioBody.max_tokens,
+  }, "=== LM STUDIO REQUEST ===");
+
+  return performJsonRequest(endpoint, { headers, body: lmstudioBody }, "LM Studio");
+}
+
 async function invokeModel(body, options = {}) {
   const { determineProvider, isFallbackEnabled, getFallbackProvider } = require("./routing");
   const metricsCollector = getMetricsCollector();
@@ -617,6 +688,8 @@ async function invokeModel(body, options = {}) {
         return await invokeOpenAI(body);
       } else if (initialProvider === "llamacpp") {
         return await invokeLlamaCpp(body);
+      } else if (initialProvider === "lmstudio") {
+        return await invokeLMStudio(body);
       }
       return await invokeDatabricks(body);
     });

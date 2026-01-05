@@ -78,6 +78,12 @@ function determineProvider(payload) {
         "Routing to llama.cpp (moderate tools)"
       );
       return "llamacpp";
+    } else if (config.lmstudio?.endpoint) {
+      logger.debug(
+        { toolCount, maxToolsForOllama, maxToolsForOpenRouter, decision: "lmstudio" },
+        "Routing to LM Studio (moderate tools)"
+      );
+      return "lmstudio";
     }
   }
 

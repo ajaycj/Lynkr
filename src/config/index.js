@@ -62,7 +62,7 @@ function resolveConfigPath(targetPath) {
   return path.resolve(normalised);
 }
 
-const SUPPORTED_MODEL_PROVIDERS = new Set(["databricks", "azure-anthropic", "ollama", "openrouter", "azure-openai", "openai", "llamacpp"]);
+const SUPPORTED_MODEL_PROVIDERS = new Set(["databricks", "azure-anthropic", "ollama", "openrouter", "azure-openai", "openai", "llamacpp", "lmstudio"]);
 const rawModelProvider = (process.env.MODEL_PROVIDER ?? "databricks").toLowerCase();
 const modelProvider = SUPPORTED_MODEL_PROVIDERS.has(rawModelProvider)
   ? rawModelProvider
@@ -101,6 +101,12 @@ const llamacppEndpoint = process.env.LLAMACPP_ENDPOINT?.trim() || "http://localh
 const llamacppModel = process.env.LLAMACPP_MODEL?.trim() || "default";
 const llamacppTimeout = Number.parseInt(process.env.LLAMACPP_TIMEOUT_MS ?? "120000", 10);
 const llamacppApiKey = process.env.LLAMACPP_API_KEY?.trim() || null;
+
+// LM Studio configuration
+const lmstudioEndpoint = process.env.LMSTUDIO_ENDPOINT?.trim() || "http://localhost:1234";
+const lmstudioModel = process.env.LMSTUDIO_MODEL?.trim() || "default";
+const lmstudioTimeout = Number.parseInt(process.env.LMSTUDIO_TIMEOUT_MS ?? "120000", 10);
+const lmstudioApiKey = process.env.LMSTUDIO_API_KEY?.trim() || null;
 
 // Hybrid routing configuration
 const preferOllama = process.env.PREFER_OLLAMA === "true";
@@ -201,6 +207,14 @@ if (modelProvider === "llamacpp") {
   }
 }
 
+if (modelProvider === "lmstudio") {
+  try {
+    new URL(lmstudioEndpoint);
+  } catch (err) {
+    throw new Error("LMSTUDIO_ENDPOINT must be a valid URL (default: http://localhost:1234)");
+  }
+}
+
 // Validate hybrid routing configuration
 if (preferOllama) {
   if (!ollamaEndpoint) {
@@ -211,8 +225,10 @@ if (preferOllama) {
       `FALLBACK_PROVIDER must be one of: ${Array.from(SUPPORTED_MODEL_PROVIDERS).join(", ")}`
     );
   }
-  if (fallbackEnabled && fallbackProvider === "ollama") {
-    throw new Error("FALLBACK_PROVIDER cannot be 'ollama' (circular fallback)");
+  // Prevent local providers from being used as fallback (they can fail just like Ollama)
+  const localProviders = ["ollama", "llamacpp", "lmstudio"];
+  if (fallbackEnabled && localProviders.includes(fallbackProvider)) {
+    throw new Error(`FALLBACK_PROVIDER cannot be '${fallbackProvider}' (local providers should not be fallbacks). Use cloud providers: databricks, azure-anthropic, azure-openai, openrouter, openai`);
   }
 
   // Ensure fallback provider is properly configured (only if fallback is enabled)
@@ -423,6 +439,12 @@ const config = {
     model: llamacppModel,
     timeout: Number.isNaN(llamacppTimeout) ? 120000 : llamacppTimeout,
     apiKey: llamacppApiKey,
+  },
+  lmstudio: {
+    endpoint: lmstudioEndpoint,
+    model: lmstudioModel,
+    timeout: Number.isNaN(lmstudioTimeout) ? 120000 : lmstudioTimeout,
+    apiKey: lmstudioApiKey,
   },
   modelProvider: {
     type: modelProvider,
