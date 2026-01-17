@@ -1052,6 +1052,38 @@ function sanitizePayload(payload) {
     }
   }
 
+  // FIX: Prevent consecutive messages with the same role (causes llama.cpp 400 error)
+  if (Array.isArray(clean.messages) && clean.messages.length > 0) {
+    const deduplicated = [];
+    let lastRole = null;
+
+    for (const msg of clean.messages) {
+      // Skip if this message has the same role as the previous one
+      if (msg.role === lastRole) {
+        logger.debug({
+          skippedRole: msg.role,
+          contentPreview: typeof msg.content === 'string'
+            ? msg.content.substring(0, 50)
+            : JSON.stringify(msg.content).substring(0, 50)
+        }, 'Skipping duplicate consecutive message with same role');
+        continue;
+      }
+
+      deduplicated.push(msg);
+      lastRole = msg.role;
+    }
+
+    if (deduplicated.length !== clean.messages.length) {
+      logger.info({
+        originalCount: clean.messages.length,
+        deduplicatedCount: deduplicated.length,
+        removed: clean.messages.length - deduplicated.length
+      }, 'Removed consecutive duplicate roles from message sequence');
+    }
+
+    clean.messages = deduplicated;
+  }
+
   return clean;
 }
 

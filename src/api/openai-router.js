@@ -901,6 +901,193 @@ router.post("/embeddings", async (req, res) => {
 });
 
 /**
+ * POST /v1/responses
+ *
+ * OpenAI Responses API endpoint (used by GPT-5-Codex and newer models).
+ * Converts Responses API format to Chat Completions → processes → converts back.
+ */
+router.post("/responses", async (req, res) => {
+  const startTime = Date.now();
+  const sessionId = req.headers["x-session-id"] || req.headers["authorization"]?.split(" ")[1] || "responses-session";
+
+  try {
+    const { convertResponsesToChat, convertChatToResponses } = require("../clients/responses-format");
+
+    // Comprehensive debug logging
+    logger.info({
+      endpoint: "/v1/responses",
+      inputType: typeof req.body.input,
+      inputIsArray: Array.isArray(req.body.input),
+      inputLength: Array.isArray(req.body.input) ? req.body.input.length : req.body.input?.length,
+      inputPreview: typeof req.body.input === 'string'
+        ? req.body.input.substring(0, 100)
+        : Array.isArray(req.body.input)
+          ? req.body.input.map(m => ({role: m?.role, hasContent: !!m?.content, hasTool: !!m?.tool_calls}))
+          : 'unknown',
+      model: req.body.model,
+      hasTools: !!req.body.tools,
+      stream: req.body.stream || false,
+      fullRequestBodyKeys: Object.keys(req.body)
+    }, "=== RESPONSES API REQUEST ===");
+
+    // Convert Responses API to Chat Completions format
+    const chatRequest = convertResponsesToChat(req.body);
+
+    logger.info({
+      chatRequestMessageCount: chatRequest.messages?.length,
+      chatRequestMessages: chatRequest.messages?.map(m => ({
+        role: m.role,
+        hasContent: !!m.content,
+        contentPreview: typeof m.content === 'string' ? m.content.substring(0, 50) : m.content
+      }))
+    }, "After Responses→Chat conversion");
+
+    // Convert to Anthropic format
+    const anthropicRequest = convertOpenAIToAnthropic(chatRequest);
+
+    logger.info({
+      anthropicMessageCount: anthropicRequest.messages?.length,
+      anthropicMessages: anthropicRequest.messages?.map(m => ({
+        role: m.role,
+        hasContent: !!m.content
+      }))
+    }, "After Chat→Anthropic conversion");
+
+    // Get session
+    const session = getSession(sessionId);
+
+    // Handle streaming vs non-streaming
+    if (req.body.stream) {
+      // Set up SSE headers for streaming
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      try {
+        // Force non-streaming from orchestrator
+        anthropicRequest.stream = false;
+
+        const result = await orchestrator.processMessage({
+          payload: anthropicRequest,
+          headers: req.headers,
+          session: session,
+          options: {
+            maxSteps: req.body?.max_steps
+          }
+        });
+
+        // Convert back: Anthropic → OpenAI → Responses
+        const chatResponse = convertAnthropicToOpenAI(result.body, req.body.model);
+        const responsesResponse = convertChatToResponses(chatResponse);
+
+        // Simulate streaming using OpenAI Responses API SSE format
+        const content = responsesResponse.content || "";
+        const words = content.split(" ");
+
+        // Send response.created event
+        const createdEvent = {
+          id: responsesResponse.id,
+          object: "response.created",
+          created: responsesResponse.created,
+          model: req.body.model
+        };
+        res.write(`event: response.created\n`);
+        res.write(`data: ${JSON.stringify(createdEvent)}\n\n`);
+
+        // Send content in word chunks using response.output_text.delta
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i] + (i < words.length - 1 ? " " : "");
+          const deltaEvent = {
+            id: responsesResponse.id,
+            object: "response.output_text.delta",
+            delta: word,
+            created: responsesResponse.created
+          };
+          res.write(`event: response.output_text.delta\n`);
+          res.write(`data: ${JSON.stringify(deltaEvent)}\n\n`);
+        }
+
+        // Send response.completed event
+        const completedEvent = {
+          id: responsesResponse.id,
+          object: "response.completed",
+          created: responsesResponse.created,
+          model: req.body.model,
+          content: content,
+          stop_reason: responsesResponse.stop_reason,
+          usage: responsesResponse.usage
+        };
+        res.write(`event: response.completed\n`);
+        res.write(`data: ${JSON.stringify(completedEvent)}\n\n`);
+
+        // Optional: Send [DONE] marker
+        res.write("data: [DONE]\n\n");
+        res.end();
+
+        logger.info({
+          duration: Date.now() - startTime,
+          mode: "streaming",
+          contentLength: content.length
+        }, "=== RESPONSES API STREAMING COMPLETE ===");
+
+      } catch (streamError) {
+        logger.error({ error: streamError.message, stack: streamError.stack }, "Responses API streaming error");
+
+        // Send error via SSE
+        res.write(`data: ${JSON.stringify({
+          error: {
+            message: streamError.message || "Internal server error",
+            type: "server_error",
+            code: "internal_error"
+          }
+        })}\n\n`);
+        res.end();
+      }
+
+    } else {
+      // Non-streaming response
+      anthropicRequest.stream = false;
+
+      const result = await orchestrator.processMessage({
+        payload: anthropicRequest,
+        headers: req.headers,
+        session: session,
+        options: {
+          maxSteps: req.body?.max_steps
+        }
+      });
+
+      // Convert back: Anthropic → OpenAI → Responses
+      const chatResponse = convertAnthropicToOpenAI(result.body, req.body.model);
+      const responsesResponse = convertChatToResponses(chatResponse);
+
+      logger.info({
+        duration: Date.now() - startTime,
+        contentLength: responsesResponse.content?.length || 0,
+        stopReason: responsesResponse.stop_reason
+      }, "=== RESPONSES API RESPONSE ===");
+
+      res.json(responsesResponse);
+    }
+
+  } catch (error) {
+    logger.error({
+      error: error.message,
+      stack: error.stack,
+      duration: Date.now() - startTime
+    }, "Responses API error");
+
+    res.status(500).json({
+      error: {
+        message: error.message || "Internal server error",
+        type: "server_error",
+        code: "internal_error"
+      }
+    });
+  }
+});
+
+/**
  * GET /v1/health
  *
  * Health check endpoint (alias to /health/ready).

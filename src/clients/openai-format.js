@@ -124,15 +124,17 @@ function convertOpenAIToAnthropic(openaiRequest) {
   // Convert tools format (OpenAI → Anthropic)
   let anthropicTools = null;
   if (tools && tools.length > 0) {
-    anthropicTools = tools.map(tool => ({
-      name: tool.function.name,
-      description: tool.function.description || "",
-      input_schema: tool.function.parameters || {
-        type: "object",
-        properties: {},
-        required: []
-      }
-    }));
+    anthropicTools = tools
+      .filter(tool => tool && tool.function && tool.function.name) // Filter out invalid tools
+      .map(tool => ({
+        name: tool.function.name,
+        description: tool.function.description || "",
+        input_schema: tool.function.parameters || {
+          type: "object",
+          properties: {},
+          required: []
+        }
+      }));
   }
 
   // Build Anthropic request
