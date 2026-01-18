@@ -152,7 +152,7 @@ Configure Codex Cli to use Lynkr
   ```
                                                                                                                                                                                                                                                                                                                               
                                                                                                                                                                                                                                                                                                                               
-## Lynkr also supports Codex Cli (via api) , Cline, Continue.dev and other OpenAI compatible tools.
+## Lynkr also supports  Cline, Continue.dev and other OpenAI compatible tools.
 ---
 
 ## Documentation
