@@ -16,7 +16,7 @@
 
 ## Overview
 
-Lynkr is a **self-hosted proxy server** that unlocks Claude Code CLI and Cursor IDE by enabling:
+Lynkr is a **self-hosted proxy server** that unlocks Claude Code CLI , Cursor IDE and Codex Cli by enabling:
 
 - 🚀 **Any LLM Provider** - Databricks, AWS Bedrock (100+ models), OpenRouter (100+ models), Ollama (local), llama.cpp, Azure OpenAI, Azure Anthropic, OpenAI, LM Studio
 - 💰 **60-80% Cost Reduction** - Built-in token optimization with smart tool selection, prompt caching, and memory deduplication
@@ -64,14 +64,9 @@ nano .env
 npm start
 ```
 
-**Option 3: Homebrew (macOS/Linux)**
-```bash
-brew tap vishalveerareddy123/lynkr
-brew install lynkr
-lynkr start
-```
 
-**Option 4: Docker**
+
+**Option 3: Docker**
 ```bash
 docker-compose up -d
 ```
@@ -137,6 +132,27 @@ Configure Cursor IDE to use Lynkr:
 
 📖 **[Full Cursor Setup Guide](documentation/cursor-integration.md)** | **[Embeddings Configuration](documentation/embeddings.md)**
 
+## Codex CLI with Lynkr                                                                                                                                                                                                                    
+Configure Codex Cli to use Lynkr                                                                                                                                                                                                                                                
+  Option 1: **Environment Variable (simplest)**                                                                                                                                                                                                          
+ ``` 
+ export OPENAI_BASE_URL=http://localhost:8081/v1                                                                                                                                                                                                    
+  export OPENAI_API_KEY=dummy                                                                                                                                                                                                                        
+  codex 
+  ```
+                                                                                                                                                                                                                                                     
+  Option 2: **Config File (~/.codex/config.toml)**  
+  ```                     
+  model_provider = "lynkr"                                                                                                                                                                                                                           
+                                                                                                                                                                                                                                                     
+  [model_providers.lynkr]                                                                                                                                                                                                                            
+  name = "Lynkr Proxy"                                                                                                                                                                                                                               
+  base_url = "http://localhost:8081/v1"                                                                                                                                                                                                              
+  env_key = "OPENAI_API_KEY"     
+  ```
+                                                                                                                                                                                                                                                                                                                              
+                                                                                                                                                                                                                                                                                                                              
+## Lynkr also supports Codex Cli (via api) , Cline, Continue.dev and other OpenAI compatible tools.
 ---
 
 ## Documentation
