@@ -4,6 +4,7 @@ const { getSession } = require("../sessions");
 const metrics = require("../metrics");
 const { createRateLimiter } = require("./middleware/rate-limiter");
 const openaiRouter = require("./openai-router");
+const { getRoutingHeaders, getRoutingStats, analyzeComplexity } = require("../routing");
 
 const router = express.Router();
 
@@ -59,6 +60,15 @@ router.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// Routing stats endpoint (Phase 3: Metrics)
+router.get("/routing/stats", (req, res) => {
+  const stats = getRoutingStats();
+  res.json({
+    status: "ok",
+    stats: stats || { message: "No routing decisions recorded yet" },
+  });
+});
+
 router.get("/debug/session", (req, res) => {
   if (!req.sessionId) {
     return res.status(400).json({ error: "missing_session_id", message: "Provide x-session-id header" });
@@ -109,6 +119,16 @@ router.post("/v1/messages", rateLimiter, async (req, res, next) => {
     const wantsStream = Boolean(req.query?.stream === 'true' || req.body?.stream);
     const hasTools = Array.isArray(req.body?.tools) && req.body.tools.length > 0;
 
+    // Analyze complexity for routing headers (Phase 3)
+    const complexity = analyzeComplexity(req.body);
+    const routingHeaders = getRoutingHeaders({
+      provider: complexity.recommendation === 'local' ? 'ollama' : 'cloud',
+      score: complexity.score,
+      threshold: complexity.threshold,
+      method: 'complexity',
+      reason: complexity.breakdown?.taskType?.reason || complexity.recommendation,
+    });
+
     // For true streaming: only support non-tool requests for MVP
     // Tool requests require buffering for agent loop
     if (wantsStream && !hasTools) {
@@ -118,6 +138,7 @@ router.post("/v1/messages", rateLimiter, async (req, res, next) => {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
+        ...routingHeaders,  // Include routing headers
       });
       if (typeof res.flushHeaders === "function") {
         res.flushHeaders();
@@ -385,6 +406,13 @@ router.post("/v1/messages", rateLimiter, async (req, res, next) => {
       res.end();
       return;
     }
+
+    // Add routing headers (Phase 3)
+    Object.entries(routingHeaders).forEach(([key, value]) => {
+      if (value !== undefined) {
+        res.setHeader(key, value);
+      }
+    });
 
     if (result.headers) {
       Object.entries(result.headers).forEach(([key, value]) => {

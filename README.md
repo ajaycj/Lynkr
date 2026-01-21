@@ -1,4 +1,5 @@
-# Lynkr - Claude Code Proxy with Multi-Provider Support
+# Lynkr - Run Cursor, Cline, Continue, and Claude Code on any model.
+## One universal LLM proxy for AI coding tools.
 
 [![npm version](https://img.shields.io/npm/v/lynkr.svg)](https://www.npmjs.com/package/lynkr)
 [![Homebrew Tap](https://img.shields.io/badge/homebrew-lynkr-brightgreen.svg)](https://github.com/vishalveerareddy123/homebrew-lynkr)
@@ -10,8 +11,14 @@
 [![Ollama Compatible](https://img.shields.io/badge/Ollama-Compatible-brightgreen)](https://ollama.ai/)
 [![llama.cpp Compatible](https://img.shields.io/badge/llama.cpp-Compatible-blue)](https://github.com/ggerganov/llama.cpp)
 
-> **Production-ready Claude Code proxy supporting 9+ LLM providers with 60-80% cost reduction through token optimization.**
-
+### Use Case
+```
+        Cursor / Cline / Continue / Claude Code
+                        ↓
+                       Lynkr
+                        ↓
+        Local LLMs | OpenRouter | Azure | Databricks
+```
 ---
 
 ## Overview
@@ -136,8 +143,8 @@ Configure Cursor IDE to use Lynkr:
 Configure Codex Cli to use Lynkr                                                                                                                                                                                                                                                
   Option 1: **Environment Variable (simplest)**                                                                                                                                                                                                          
  ``` 
- export OPENAI_BASE_URL=http://localhost:8081/v1                                                                                                                                                                                                    
-  export OPENAI_API_KEY=dummy                                                                                                                                                                                                                        
+export OPENAI_BASE_URL=http://localhost:8081/v1                                                                                                                                                                                                    
+export  OPENAI_API_KEY=dummy                                                                                                                                                                                                                        
   codex 
   ```
                                                                                                                                                                                                                                                      
@@ -150,8 +157,7 @@ Configure Codex Cli to use Lynkr
   base_url = "http://localhost:8081/v1"                                                                                                                                                                                                              
   env_key = "OPENAI_API_KEY"     
   ```
-                                                                                                                                                                                                                                                                                                                              
-                                                                                                                                                                                                                                                                                                                              
+                                                          
 ## Lynkr also supports  Cline, Continue.dev and other OpenAI compatible tools.
 ---
 
@@ -214,7 +220,7 @@ Configure Codex Cli to use Lynkr
 
 ```
 ┌─────────────────┐
-│ Claude Code CLI │  or  Cursor IDE
+│    AI Tools     │  
 └────────┬────────┘
          │ Anthropic/OpenAI Format
          ↓
@@ -267,7 +273,7 @@ export MODEL_PROVIDER=openrouter
 export OPENROUTER_API_KEY=sk-or-v1-your-key
 npm start
 ```
-
+** You can setup multiple models like local models
 📖 **[More Examples](documentation/providers.md#quick-start-examples)**
 
 ---

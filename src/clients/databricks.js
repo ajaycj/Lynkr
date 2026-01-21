@@ -911,19 +911,34 @@ async function invokeBedrock(body) {
 }
 
 async function invokeModel(body, options = {}) {
-  const { determineProvider, isFallbackEnabled, getFallbackProvider } = require("./routing");
+  const { determineProvider, isFallbackEnabled, getFallbackProvider, analyzeComplexity } = require("./routing");
   const metricsCollector = getMetricsCollector();
   const registry = getCircuitBreakerRegistry();
 
-  // Determine provider based on routing logic
+  // Analyze complexity and determine provider
+  const complexityAnalysis = analyzeComplexity(body);
   const initialProvider = options.forceProvider ?? determineProvider(body);
   const preferOllama = config.modelProvider?.preferOllama ?? false;
+
+  // Build routing decision object for response headers
+  const routingDecision = {
+    provider: initialProvider,
+    score: complexityAnalysis.score,
+    threshold: complexityAnalysis.threshold,
+    mode: complexityAnalysis.mode,
+    recommendation: complexityAnalysis.recommendation,
+    method: complexityAnalysis.score !== undefined ? 'complexity' : 'static',
+    taskType: complexityAnalysis.breakdown?.taskType?.reason,
+  };
 
   logger.debug({
     initialProvider,
     preferOllama,
     fallbackEnabled: isFallbackEnabled(),
     toolCount: Array.isArray(body?.tools) ? body.tools.length : 0,
+    complexityScore: complexityAnalysis.score,
+    complexityThreshold: complexityAnalysis.threshold,
+    recommendation: complexityAnalysis.recommendation,
   }, "Provider routing decision");
 
   metricsCollector.recordProviderRouting(initialProvider);
@@ -979,10 +994,11 @@ async function invokeModel(body, options = {}) {
       }
     }
 
-    // Return result with provider info for proper response conversion
+    // Return result with provider info and routing decision for headers
     return {
       ...result,
-      actualProvider: initialProvider
+      actualProvider: initialProvider,
+      routingDecision,
     };
 
   } catch (err) {
@@ -1061,10 +1077,16 @@ async function invokeModel(body, options = {}) {
         totalLatency: Date.now() - startTime,
       }, "Fallback to cloud provider succeeded");
 
-      // Return result with actual provider used (fallback provider)
+      // Return result with actual provider used (fallback provider) and routing decision
       return {
         ...fallbackResult,
-        actualProvider: fallbackProvider
+        actualProvider: fallbackProvider,
+        routingDecision: {
+          ...routingDecision,
+          provider: fallbackProvider,
+          method: 'fallback',
+          fallbackReason: reason,
+        },
       };
 
     } catch (fallbackErr) {
