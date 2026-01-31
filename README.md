@@ -83,7 +83,7 @@ docker-compose up -d
 
 ## Supported Providers
 
-Lynkr supports **9+ LLM providers**:
+Lynkr supports **10+ LLM providers**:
 
 | Provider | Type | Models | Cost | Privacy |
 |----------|------|--------|------|---------|
@@ -96,6 +96,7 @@ Lynkr supports **9+ LLM providers**:
 | **Azure Anthropic** | Cloud | Claude models | $$$ | Cloud |
 | **OpenAI** | Cloud | GPT-4o, o1, o3 | $$$ | Cloud |
 | **LM Studio** | Local | Local models with GUI | **FREE** | 🔒 100% Local |
+| **MLX OpenAI Server** | Local | Apple Silicon (M1/M2/M3/M4) | **FREE** | 🔒 100% Local |
 
 📖 **[Full Provider Configuration Guide](documentation/providers.md)**
 
@@ -290,6 +291,19 @@ export OLLAMA_MODEL=llama3.1:70b
 npm start
 ```
 > 🌐 **Note:** All provider endpoints support remote addresses - not limited to localhost. Use any IP, hostname, or domain.
+
+**MLX OpenAI Server (Apple Silicon)**
+```bash
+# Terminal 1: Start MLX server
+mlx-openai-server launch --model-path mlx-community/Qwen2.5-Coder-7B-Instruct-4bit --model-type lm
+
+# Terminal 2: Start Lynkr
+export MODEL_PROVIDER=openai
+export OPENAI_ENDPOINT=http://localhost:8000/v1/chat/completions
+export OPENAI_API_KEY=not-needed
+npm start
+```
+> 🍎 **Apple Silicon optimized** - Native MLX performance on M1/M2/M3/M4 Macs. See [MLX setup guide](documentation/providers.md#10-mlx-openai-server-apple-silicon).
 
 **AWS Bedrock (100+ models)**
 ```bash

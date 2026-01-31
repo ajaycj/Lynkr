@@ -19,6 +19,7 @@ Lynkr supports multiple AI model providers, giving you flexibility in choosing t
 | **Azure Anthropic** | Cloud | Claude models | $$$ | Cloud | Medium |
 | **OpenAI** | Cloud | GPT-4o, o1, o3 | $$$ | Cloud | Easy |
 | **LM Studio** | Local | Local models with GUI | **FREE** | 🔒 100% Local | Easy |
+| **MLX OpenAI Server** | Local | Apple Silicon optimized | **FREE** | 🔒 100% Local | Easy |
 
 ---
 
@@ -681,6 +682,97 @@ LMSTUDIO_API_KEY=your-optional-api-key
 - ✅ **Built-in server** with OpenAI-compatible API
 - ✅ **GPU acceleration** support
 - ✅ **Model presets** and configurations
+
+---
+
+### 10. MLX OpenAI Server (Apple Silicon)
+
+**Best for:** Maximum performance on Apple Silicon Macs (M1/M2/M3/M4)
+
+[MLX OpenAI Server](https://github.com/cubist38/mlx-openai-server) is a high-performance local LLM server optimized for Apple's MLX framework. It provides OpenAI-compatible endpoints for text, vision, audio, and image generation models.
+
+#### Installation
+
+```bash
+# Create virtual environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# Install
+pip install mlx-openai-server
+
+# Optional: for audio transcription
+brew install ffmpeg
+```
+
+#### Start the Server
+
+```bash
+# Text/Code models (recommended for coding)
+mlx-openai-server launch --model-path mlx-community/Qwen2.5-Coder-7B-Instruct-4bit --model-type lm
+
+# Smaller model (faster, less RAM)
+mlx-openai-server launch --model-path mlx-community/Qwen2.5-Coder-1.5B-Instruct-4bit --model-type lm
+
+# General purpose
+mlx-openai-server launch --model-path mlx-community/Qwen2.5-3B-Instruct-4bit --model-type lm
+```
+
+Server runs at `http://localhost:8000/v1` by default.
+
+#### Configuration
+
+```env
+MODEL_PROVIDER=openai
+OPENAI_ENDPOINT=http://localhost:8000/v1/chat/completions
+OPENAI_API_KEY=not-needed
+```
+
+> 🌐 **Remote Support**: `OPENAI_ENDPOINT` can be any address (e.g., `http://192.168.1.100:8000/v1/chat/completions` for a Mac Studio GPU server).
+
+#### Recommended Models for Coding
+
+| Model | Size | RAM | Command |
+|-------|------|-----|---------|
+| `Qwen2.5-Coder-1.5B-Instruct-4bit` | ~1GB | 4GB | Fast, simple code tasks |
+| `Qwen2.5-3B-Instruct-4bit` | ~2GB | 6GB | General + code |
+| `Qwen2.5-Coder-7B-Instruct-4bit` | ~4GB | 8GB | Best for coding |
+| `Qwen2.5-Coder-14B-Instruct-4bit` | ~8GB | 16GB | Complex reasoning |
+| `Llama-3.2-3B-Instruct-4bit` | ~2GB | 6GB | General purpose |
+| `Phi-3-mini-4k-instruct-4bit` | ~2GB | 6GB | Reasoning tasks |
+
+#### Server Options
+
+```bash
+mlx-openai-server launch \
+  --model-path mlx-community/Qwen2.5-Coder-7B-Instruct-4bit \
+  --model-type lm \
+  --host 0.0.0.0 \           # Allow remote connections
+  --port 8000 \              # Default port
+  --max-concurrency 2 \      # Parallel requests
+  --context-length 4096      # Max context window
+```
+
+#### MLX vs Ollama Comparison
+
+| Feature | MLX OpenAI Server | Ollama |
+|---------|-------------------|--------|
+| Platform | Apple Silicon only | Cross-platform |
+| Performance | Native MLX optimization | Good on Apple Silicon |
+| Model Format | HuggingFace MLX | Ollama-specific |
+| Vision/Audio | ✅ Built-in | Limited |
+| Image Generation | ✅ Flux support | ❌ |
+| Quantization | 4/8/16-bit flexible | Model-specific |
+
+#### Test Connection
+
+```bash
+curl -X POST http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" -d '{"model": "default", "messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+#### Pricing
+
+**100% FREE** - Models run locally on your Apple Silicon Mac.
 
 ---
 
