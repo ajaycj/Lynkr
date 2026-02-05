@@ -1087,36 +1087,52 @@ function sanitizePayload(payload) {
     }
   }
 
-  // FIX: Prevent consecutive messages with the same role (causes llama.cpp 400 error)
+  // FIX: Handle consecutive messages with the same role (causes llama.cpp 400 error)
+  // Strategy: Merge all consecutive messages, add instruction to focus on last request
   if (Array.isArray(clean.messages) && clean.messages.length > 0) {
-    const deduplicated = [];
-    let lastRole = null;
+    const merged = [];
+    const messages = clean.messages;
 
-    for (const msg of clean.messages) {
-      // Skip if this message has the same role as the previous one
-      if (msg.role === lastRole) {
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+
+      if (merged.length > 0 && msg.role === merged[merged.length - 1].role) {
+        // Merge content with the previous message of the same role
+        const prevMsg = merged[merged.length - 1];
+        const prevContent = typeof prevMsg.content === 'string' ? prevMsg.content : JSON.stringify(prevMsg.content);
+        const currContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
+        prevMsg.content = prevContent + '\n\n' + currContent;
+
         logger.debug({
-          skippedRole: msg.role,
-          contentPreview: typeof msg.content === 'string'
-            ? msg.content.substring(0, 50)
-            : JSON.stringify(msg.content).substring(0, 50)
-        }, 'Skipping duplicate consecutive message with same role');
-        continue;
+          mergedRole: msg.role,
+          addedContentPreview: currContent.substring(0, 50)
+        }, 'Merged consecutive message with same role');
+      } else {
+        merged.push({ ...msg });
       }
-
-      deduplicated.push(msg);
-      lastRole = msg.role;
     }
 
-    if (deduplicated.length !== clean.messages.length) {
+    // If the last message is from user, add instruction to focus on the actual request
+    if (merged.length > 0 && merged[merged.length - 1].role === 'user') {
+      const lastMsg = merged[merged.length - 1];
+      const content = typeof lastMsg.content === 'string' ? lastMsg.content : JSON.stringify(lastMsg.content);
+
+      // Find the last actual user request (after all the context/instructions)
+      // Add a clear separator to help the model focus
+      if (content.length > 500) {
+        lastMsg.content = content + '\n\n---\nIMPORTANT: Focus on and respond ONLY to my most recent request above. Do not summarize or acknowledge previous instructions.';
+      }
+    }
+
+    if (merged.length !== clean.messages.length) {
       logger.info({
         originalCount: clean.messages.length,
-        deduplicatedCount: deduplicated.length,
-        removed: clean.messages.length - deduplicated.length
-      }, 'Removed consecutive duplicate roles from message sequence');
+        mergedCount: merged.length,
+        reduced: clean.messages.length - merged.length
+      }, 'Merged consecutive messages with same role');
     }
 
-    clean.messages = deduplicated;
+    clean.messages = merged;
   }
 
   // [CONTEXT_FLOW] Log payload after sanitization
@@ -1227,6 +1243,7 @@ async function runAgentLoop({
   options,
   cacheKey,
   providerType,
+  headers,
 }) {
   console.log('[DEBUG] runAgentLoop ENTERED - providerType:', providerType, 'messages:', cleanPayload.messages?.length);
   logger.info({ providerType, messageCount: cleanPayload.messages?.length }, 'runAgentLoop ENTERED');
@@ -1505,17 +1522,17 @@ async function runAgentLoop({
   }
 
   // Apply Headroom compression if enabled
-  console.log('[HEADROOM DEBUG] About to check compression - step:', steps, 'messages:', cleanPayload.messages?.length);
+  const headroomEstTokens = Math.ceil(JSON.stringify(cleanPayload.messages || []).length / 4);
   logger.info({
     headroomEnabled: isHeadroomEnabled(),
-    hasMessages: Boolean(cleanPayload.messages),
     messageCount: cleanPayload.messages?.length ?? 0,
+    estimatedTokens: headroomEstTokens,
+    threshold: config.headroom?.minTokens || 500,
+    willCompress: isHeadroomEnabled() && headroomEstTokens >= (config.headroom?.minTokens || 500),
   }, 'Headroom compression check');
 
   if (isHeadroomEnabled() && cleanPayload.messages && cleanPayload.messages.length > 0) {
-    console.log('[HEADROOM DEBUG] Entering compression block');
     try {
-      console.log('[HEADROOM DEBUG] About to call headroomCompress');
       const compressionResult = await headroomCompress(
         cleanPayload.messages,
         cleanPayload.tools || [],
@@ -1524,7 +1541,14 @@ async function runAgentLoop({
           queryContext: cleanPayload.messages[cleanPayload.messages.length - 1]?.content,
         }
       );
-      console.log('[HEADROOM DEBUG] headroomCompress returned - compressed:', compressionResult.compressed, 'stats:', JSON.stringify(compressionResult.stats));
+
+      logger.info({
+        compressed: compressionResult.compressed,
+        tokensBefore: compressionResult.stats?.tokens_before,
+        tokensAfter: compressionResult.stats?.tokens_after,
+        savings: compressionResult.stats?.savings_percent ? `${compressionResult.stats.savings_percent}%` : 'N/A',
+        reason: compressionResult.stats?.reason || compressionResult.stats?.transforms_applied?.join(', ') || 'none',
+      }, 'Headroom compression result');
 
       if (compressionResult.compressed) {
         cleanPayload.messages = compressionResult.messages;
@@ -1548,6 +1572,8 @@ async function runAgentLoop({
     } catch (headroomErr) {
       logger.warn({ err: headroomErr, sessionId: session?.id ?? null }, 'Headroom compression failed, using original messages');
     }
+  }
+
   // Generate correlation ID for request/response pairing
   const correlationId = `req_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
 
@@ -2495,12 +2521,40 @@ async function runAgentLoop({
     } else if (actualProvider === "azure-openai") {
       const { convertOpenRouterResponseToAnthropic } = require("../clients/openrouter-utils");
 
-      // Validate Azure OpenAI response has choices array before conversion
-      if (!databricksResponse.json?.choices?.length) {
+      // Check if response is already in Anthropic format (Azure AI Foundry Responses API)
+      const isAnthropicFormat = databricksResponse.json?.type === "message" &&
+                                 Array.isArray(databricksResponse.json?.content) &&
+                                 databricksResponse.json?.stop_reason !== undefined;
+
+      if (isAnthropicFormat) {
+        // Azure AI Foundry Responses API returns Anthropic format directly
+        logger.info({
+          format: "anthropic",
+          contentBlocks: databricksResponse.json.content?.length || 0,
+          contentTypes: databricksResponse.json.content?.map(c => c.type) || [],
+          stopReason: databricksResponse.json.stop_reason,
+          hasToolUse: databricksResponse.json.content?.some(c => c.type === 'tool_use')
+        }, "=== AZURE RESPONSES API (ANTHROPIC FORMAT) ===");
+
+        // Use response directly - it's already in Anthropic format
+        anthropicPayload = {
+          id: databricksResponse.json.id,
+          type: "message",
+          role: databricksResponse.json.role || "assistant",
+          content: databricksResponse.json.content,
+          model: databricksResponse.json.model || requestedModel,
+          stop_reason: databricksResponse.json.stop_reason,
+          stop_sequence: databricksResponse.json.stop_sequence || null,
+          usage: databricksResponse.json.usage || { input_tokens: 0, output_tokens: 0 }
+        };
+
+        anthropicPayload.content = policy.sanitiseContent(anthropicPayload.content);
+      } else if (!databricksResponse.json?.choices?.length) {
+        // Not Anthropic format and no choices array - malformed response
         logger.warn({
           json: databricksResponse.json,
           status: databricksResponse.status
-        }, "Azure OpenAI response missing choices array");
+        }, "Azure OpenAI response missing choices array and not in Anthropic format");
 
         appendTurnToSession(session, {
           role: "assistant",
@@ -2517,32 +2571,33 @@ async function runAgentLoop({
           durationMs: Date.now() - start,
           terminationReason: response.terminationReason,
         };
+      } else {
+        // Standard OpenAI format with choices array
+        logger.info({
+          format: "openai",
+          hasChoices: !!databricksResponse.json?.choices,
+          choiceCount: databricksResponse.json?.choices?.length || 0,
+          firstChoice: databricksResponse.json?.choices?.[0],
+          hasToolCalls: !!databricksResponse.json?.choices?.[0]?.message?.tool_calls,
+          toolCallCount: databricksResponse.json?.choices?.[0]?.message?.tool_calls?.length || 0,
+          finishReason: databricksResponse.json?.choices?.[0]?.finish_reason
+        }, "=== AZURE OPENAI (STANDARD FORMAT) ===");
+
+        // Convert OpenAI format to Anthropic format (reuse OpenRouter utility)
+        anthropicPayload = convertOpenRouterResponseToAnthropic(
+          databricksResponse.json,
+          requestedModel,
+        );
+
+        logger.info({
+          contentBlocks: anthropicPayload.content?.length || 0,
+          contentTypes: anthropicPayload.content?.map(c => c.type) || [],
+          stopReason: anthropicPayload.stop_reason,
+          hasToolUse: anthropicPayload.content?.some(c => c.type === 'tool_use')
+        }, "=== CONVERTED ANTHROPIC RESPONSE ===");
+
+        anthropicPayload.content = policy.sanitiseContent(anthropicPayload.content);
       }
-
-      // Log Azure OpenAI raw response
-      logger.info({
-        hasChoices: !!databricksResponse.json?.choices,
-        choiceCount: databricksResponse.json?.choices?.length || 0,
-        firstChoice: databricksResponse.json?.choices?.[0],
-        hasToolCalls: !!databricksResponse.json?.choices?.[0]?.message?.tool_calls,
-        toolCallCount: databricksResponse.json?.choices?.[0]?.message?.tool_calls?.length || 0,
-        finishReason: databricksResponse.json?.choices?.[0]?.finish_reason
-      }, "=== AZURE OPENAI RAW RESPONSE ===");
-
-      // Convert OpenAI format to Anthropic format (reuse OpenRouter utility)
-      anthropicPayload = convertOpenRouterResponseToAnthropic(
-        databricksResponse.json,
-        requestedModel,
-      );
-
-      logger.info({
-        contentBlocks: anthropicPayload.content?.length || 0,
-        contentTypes: anthropicPayload.content?.map(c => c.type) || [],
-        stopReason: anthropicPayload.stop_reason,
-        hasToolUse: anthropicPayload.content?.some(c => c.type === 'tool_use')
-      }, "=== CONVERTED ANTHROPIC RESPONSE ===");
-
-      anthropicPayload.content = policy.sanitiseContent(anthropicPayload.content);
     } else if (actualProvider === "openai") {
       const { convertOpenRouterResponseToAnthropic } = require("../clients/openrouter-utils");
 
@@ -3060,7 +3115,6 @@ async function runAgentLoop({
     terminationReason: "max_steps",
   };
 }
-}
 
 async function processMessage({ payload, headers, session, cwd, options = {} }) {
   const requestedModel =
@@ -3143,6 +3197,7 @@ async function processMessage({ payload, headers, session, cwd, options = {} }) 
     options,
     cacheKey,
     providerType: config.modelProvider?.type ?? "databricks",
+    headers,
   });
 
   return loopResult.response;

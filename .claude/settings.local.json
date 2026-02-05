@@ -59,7 +59,17 @@
       "Bash(claude mcp remove:*)",
       "Bash(claude mcp add-json:*)",
       "WebFetch(domain:ui.shadcn.com)",
-      "WebFetch(domain:en.wikipedia.org)"
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:community.openai.com)",
+      "WebFetch(domain:madhub081011.medium.com)",
+      "WebFetch(domain:openai.github.io)",
+      "WebFetch(domain:fossies.org)",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:docs.cline.bot)",
+      "WebFetch(domain:kilo.ai)",
+      "Bash(node -c:*)",
+      "WebFetch(domain:dev.to)"
     ],
     "deny": [],
     "ask": []
