@@ -72,6 +72,10 @@ nano .env
 npm start
 ```
 
+**Node.js Compatibility:**
+- **Node 20-24**: Full support with all features
+- **Node 25+**: Full support (native modules auto-rebuild, babel fallback for code parsing)
+
 
 
 **Option 3: Docker**
@@ -150,15 +154,17 @@ export  OPENAI_API_KEY=dummy
   codex 
   ```
                                                                                                                                                                                                                                                      
-  Option 2: **Config File (~/.codex/config.toml)**  
-  ```                     
-  model_provider = "lynkr"                                                                                                                                                                                                                           
-                                                                                                                                                                                                                                                     
-  [model_providers.lynkr]                                                                                                                                                                                                                            
-  name = "Lynkr Proxy"                                                                                                                                                                                                                               
-  base_url = "http://localhost:8081/v1"                                                                                                                                                                                                              
+  Option 2: **Config File (~/.codex/config.toml)**
+  ```
+  model_provider = "lynkr"
+
+  [model_providers.lynkr]
+  name = "Lynkr Proxy"
+  base_url = "http://localhost:8081/v1"
   env_key = "OPENAI_API_KEY"
   ```
+
+> **Note:** For multi-step tool workflows, ensure `POLICY_TOOL_LOOP_THRESHOLD` is set high enough (default: 10).
 
 ---
 
@@ -199,6 +205,7 @@ Lynkr supports [ClawdBot](https://github.com/openclaw/openclaw) via its OpenAI-c
 ### Features & Capabilities
 - ✨ **[Core Features](documentation/features.md)** - Architecture, request flow, format conversion
 - 🧠 **[Memory System](documentation/memory-system.md)** - Titans-inspired long-term memory
+- 🗃️ **[Semantic Cache](#semantic-cache)** - Cache responses for similar prompts
 - 💰 **[Token Optimization](documentation/token-optimization.md)** - 60-80% cost reduction strategies
 - 🔧 **[Tools & Execution](documentation/tools.md)** - Tool calling, execution modes, custom tools
 
@@ -236,6 +243,33 @@ Lynkr supports [ClawdBot](https://github.com/openclaw/openclaw) via its OpenAI-c
 - ✅ **Memory System** - Titans-inspired long-term memory with surprise-based filtering
 - ✅ **Tool Calling** - Full tool support with server and passthrough execution modes
 - ✅ **Production Ready** - Battle-tested with 400+ tests, observability, and error resilience
+- ✅ **Node 20-25 Support** - Works with latest Node.js versions including v25
+- ✅ **Semantic Caching** - Cache responses for similar prompts (requires embeddings)
+
+---
+
+## Semantic Cache
+
+Lynkr includes an optional semantic response cache that returns cached responses for semantically similar prompts, reducing latency and costs.
+
+**Enable Semantic Cache:**
+```bash
+# Requires an embeddings provider (Ollama recommended)
+ollama pull nomic-embed-text
+
+# Add to .env
+SEMANTIC_CACHE_ENABLED=true
+SEMANTIC_CACHE_THRESHOLD=0.95
+OLLAMA_EMBEDDINGS_MODEL=nomic-embed-text
+OLLAMA_EMBEDDINGS_ENDPOINT=http://localhost:11434/api/embeddings
+```
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `SEMANTIC_CACHE_ENABLED` | `false` | Enable/disable semantic caching |
+| `SEMANTIC_CACHE_THRESHOLD` | `0.95` | Similarity threshold (0.0-1.0) |
+
+> **Note:** Without a proper embeddings provider, the cache uses hash-based fallback which may cause false matches. Use Ollama with `nomic-embed-text` for best results.
 
 ---
 
