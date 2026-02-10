@@ -1,5 +1,10 @@
 const crypto = require("crypto");
-const Database = require("better-sqlite3");
+let Database;
+try {
+  Database = require("better-sqlite3");
+} catch {
+  Database = null;
+}
 const path = require("path");
 const fs = require("fs");
 const config = require("../config");
@@ -49,9 +54,11 @@ class PromptCache {
     this.isClosed = false; // Track if database has been closed
 
     // Initialize persistent cache database
-    if (this.enabled) {
+    if (this.enabled && Database) {
       this.initDatabase();
       this.startPruning();
+    } else if (!Database) {
+      this.enabled = false;
     }
   }
 
