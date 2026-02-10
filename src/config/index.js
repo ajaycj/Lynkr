@@ -696,8 +696,8 @@ var config = {
     ttlMs: Number.isNaN(promptCacheTtlRaw) ? 300000 : promptCacheTtlRaw,
   },
   semanticCache: {
-    enabled: true,  // RE-ENABLED for testing
-    similarityThreshold: 0.92,  // 92% similarity for cache hit
+    enabled: process.env.SEMANTIC_CACHE_ENABLED !== 'false',  // Disable via env if needed
+    similarityThreshold: parseFloat(process.env.SEMANTIC_CACHE_THRESHOLD || '0.95'),  // Higher threshold
     maxEntries: 500,
     ttlMs: 3600000,  // 1 hour
   },

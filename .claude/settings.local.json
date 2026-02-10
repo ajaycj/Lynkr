@@ -71,7 +71,10 @@
       "WebFetch(domain:docs.cline.bot)",
       "WebFetch(domain:kilo.ai)",
       "Bash(node -c:*)",
-      "WebFetch(domain:dev.to)"
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:models.dev)",
+      "Bash(npm view:*)",
+      "Bash(kill:*)"
     ],
     "deny": [],
     "ask": []

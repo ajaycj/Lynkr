@@ -365,6 +365,15 @@ router.post("/chat/completions", async (req, res) => {
       });
     }
 
+    // DEBUG: Log full message details to diagnose Codex caching issue
+    const messagesSummary = (req.body.messages || []).map((m, i) => ({
+      index: i,
+      role: m.role,
+      contentPreview: typeof m.content === 'string'
+        ? m.content.substring(0, 200)
+        : JSON.stringify(m.content).substring(0, 200)
+    }));
+
     logger.info({
       endpoint: "/v1/chat/completions",
       model: req.body.model,
@@ -376,7 +385,9 @@ router.post("/chat/completions", async (req, res) => {
       messagesType: typeof req.body.messages,
       requestBodyKeys: Object.keys(req.body),
       // Log first 500 chars of body for debugging
-      requestBodyPreview: JSON.stringify(req.body).substring(0, 500)
+      requestBodyPreview: JSON.stringify(req.body).substring(0, 500),
+      // DEBUG: Full messages breakdown
+      messages: messagesSummary
     }, "=== OPENAI CHAT COMPLETION REQUEST ===");
 
     // Convert OpenAI request to Anthropic format
