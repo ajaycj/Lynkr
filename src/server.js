@@ -32,6 +32,7 @@ const { initializeHeadroom, shutdownHeadroom, getHeadroomManager } = require("./
 const { getWorkerPool, isWorkerPoolReady } = require("./workers/pool");
 const lazyLoader = require("./tools/lazy-loader");
 const { setLazyLoader } = require("./tools");
+const { waitForOllama } = require("./clients/ollama-startup");
 
 // Initialize MCP
 initialiseMcp();
@@ -199,6 +200,13 @@ async function start() {
   }
 
   const app = createApp();
+
+  // Wait for Ollama if it's the configured provider or preferred for routing
+  const provider = config.modelProvider?.type?.toLowerCase();
+  if (provider === "ollama" || config.modelProvider?.preferOllama) {
+    await waitForOllama();
+  }
+
   const server = app.listen(config.port, () => {
     console.log(`Claude→Databricks proxy listening on http://localhost:${config.port}`);
   });
