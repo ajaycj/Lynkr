@@ -135,6 +135,13 @@ services:
       VERTEX_MODEL: ${VERTEX_MODEL:-gemini-2.0-flash}
 
       # ============================================================
+      # MOONSHOT AI (KIMI) CONFIGURATION (OPTIONAL)
+      # ============================================================
+      MOONSHOT_API_KEY: ${MOONSHOT_API_KEY:-}
+      MOONSHOT_ENDPOINT: ${MOONSHOT_ENDPOINT:-https://api.moonshot.ai/v1/chat/completions}
+      MOONSHOT_MODEL: ${MOONSHOT_MODEL:-kimi-k2-thinking}
+
+      # ============================================================
       # EMBEDDINGS PROVIDER OVERRIDE (OPTIONAL)
       # ============================================================
       EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER:-}
@@ -182,6 +189,17 @@ services:
       WEB_FETCH_BODY_PREVIEW_MAX: ${WEB_FETCH_BODY_PREVIEW_MAX:-10000}
       WEB_SEARCH_RETRY_ENABLED: ${WEB_SEARCH_RETRY_ENABLED:-true}
       WEB_SEARCH_MAX_RETRIES: ${WEB_SEARCH_MAX_RETRIES:-2}
+
+      # ============================================================
+      # TINYFISH AI BROWSER AUTOMATION (WebAgent tool)
+      # ============================================================
+      # Get your API key from: https://tinyfish.ai
+      TINYFISH_API_KEY: ${TINYFISH_API_KEY:-}
+      TINYFISH_ENDPOINT: ${TINYFISH_ENDPOINT:-https://agent.tinyfish.ai/v1/automation/run-sse}
+      TINYFISH_BROWSER_PROFILE: ${TINYFISH_BROWSER_PROFILE:-lite}
+      TINYFISH_TIMEOUT_MS: ${TINYFISH_TIMEOUT_MS:-120000}
+      TINYFISH_PROXY_ENABLED: ${TINYFISH_PROXY_ENABLED:-false}
+      TINYFISH_PROXY_COUNTRY: ${TINYFISH_PROXY_COUNTRY:-US}
 
       # ============================================================
       # POLICY CONFIGURATION

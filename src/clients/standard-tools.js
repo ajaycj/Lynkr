@@ -381,6 +381,29 @@ EXAMPLE: User says "explore this project" → Call Task with subagent_type="Expl
     }
   },
   {
+    name: "WebAgent",
+    description: "Launches a browser agent to navigate a website and accomplish a goal. Use when you need to interact with dynamic web content (click buttons, fill forms, extract data from JS-rendered pages) beyond what a simple HTTP fetch can do. Returns structured JSON. Takes 10-60 seconds.",
+    input_schema: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "Target URL to navigate to"
+        },
+        goal: {
+          type: "string",
+          description: "What to accomplish on the page. Be specific about what data to extract or actions to take."
+        },
+        browser_profile: {
+          type: "string",
+          enum: ["lite", "stealth"],
+          description: "lite (default, faster) or stealth (for bot-protected sites)"
+        }
+      },
+      required: ["url", "goal"]
+    }
+  },
+  {
     name: "NotebookEdit",
     description: "Completely replaces the contents of a specific cell in a Jupyter notebook (.ipynb file). Use for editing interactive documents that combine code, text, and visualizations.",
     input_schema: {

@@ -8,6 +8,7 @@ const TRUNCATION_LIMITS = {
   Glob: { maxChars: 8000, strategy: 'head' },
   WebFetch: { maxChars: 16000, strategy: 'head' },
   WebSearch: { maxChars: 12000, strategy: 'head' },
+  WebAgent: { maxChars: 16000, strategy: 'head' },
   LSP: { maxChars: 8000, strategy: 'head' },
   Edit: { maxChars: 8000, strategy: 'middle' },
   Write: { maxChars: 8000, strategy: 'middle' },
