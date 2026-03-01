@@ -57,6 +57,11 @@ const TOOL_CATEGORIES = {
     loader: () => require('./tasks').registerTaskTools,
     priority: 2,
   },
+  tinyfish: {
+    keywords: ['tinyfish', 'web_agent', 'automate', 'scrape', 'extract', 'crawl', 'browser'],
+    loader: () => require('./tinyfish').registerTinyFishTools,
+    priority: 2,
+  },
   tests: {
     keywords: ['test', 'jest', 'mocha', 'pytest', 'unittest', 'spec', 'coverage', 'assert'],
     loader: () => require('./tests').registerTestTools,
@@ -277,6 +282,8 @@ function loadCategoryForTool(toolName) {
     'workspace_mcp_servers': 'mcp',
 
     // Agent task
+    // TinyFish (web agent)
+    'web_agent': 'tinyfish',
     'agent_task': 'agentTask',
   };
 

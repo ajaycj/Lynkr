@@ -1358,7 +1358,7 @@ function sanitizePayload(payload) {
     clean.tools = selectedTools.length > 0 ? selectedTools : undefined;
   }
 
-  clean.stream = payload.stream ?? false;
+  clean.stream = payload?.stream ?? false;
 
   if (
     config.modelProvider?.type === "azure-anthropic" &&
@@ -2248,7 +2248,7 @@ IMPORTANT TOOL USAGE RULES:
       const serverSideToolCalls = [];
       const clientSideToolCalls = [];
 
-      const SERVER_SIDE_TOOLS = new Set(["task", "web_search", "web_fetch", "websearch", "webfetch"]);
+      const SERVER_SIDE_TOOLS = new Set(["task", "web_search", "web_fetch", "websearch", "webfetch", "web_agent"]);
 
       for (const call of toolCalls) {
         const toolName = (call.function?.name ?? call.name ?? "").toLowerCase();

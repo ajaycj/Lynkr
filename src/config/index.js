@@ -397,6 +397,14 @@ const webFetchBodyPreviewMax = Number.parseInt(process.env.WEB_FETCH_BODY_PREVIE
 const webSearchRetryEnabled = process.env.WEB_SEARCH_RETRY_ENABLED !== "false"; // default true
 const webSearchMaxRetries = Number.parseInt(process.env.WEB_SEARCH_MAX_RETRIES ?? "2", 10);
 
+// TinyFish AI Browser Automation configuration
+const tinyfishApiKey = process.env.TINYFISH_API_KEY?.trim() || null;
+const tinyfishEndpoint = process.env.TINYFISH_ENDPOINT?.trim() || "https://agent.tinyfish.ai/v1/automation/run-sse";
+const tinyfishBrowserProfile = process.env.TINYFISH_BROWSER_PROFILE?.trim() || "lite";
+const tinyfishTimeoutMs = parseInt(process.env.TINYFISH_TIMEOUT_MS ?? "120000", 10);
+const tinyfishProxyEnabled = process.env.TINYFISH_PROXY_ENABLED === "true";
+const tinyfishProxyCountry = process.env.TINYFISH_PROXY_COUNTRY?.trim() || "US";
+
 const policyMaxSteps = Number.parseInt(process.env.POLICY_MAX_STEPS ?? "8", 10);
 const policyMaxToolCalls = Number.parseInt(process.env.POLICY_MAX_TOOL_CALLS ?? "12", 10);
 const policyToolLoopThreshold = Number.parseInt(process.env.POLICY_TOOL_LOOP_THRESHOLD ?? "10", 10);
@@ -659,6 +667,14 @@ var config = {
     bodyPreviewMax: Number.isNaN(webFetchBodyPreviewMax) ? 10000 : webFetchBodyPreviewMax,
     retryEnabled: webSearchRetryEnabled,
     maxRetries: Number.isNaN(webSearchMaxRetries) ? 2 : webSearchMaxRetries,
+  },
+  tinyfish: {
+    apiKey: tinyfishApiKey,
+    endpoint: tinyfishEndpoint,
+    browserProfile: tinyfishBrowserProfile,
+    timeoutMs: Number.isNaN(tinyfishTimeoutMs) ? 120000 : tinyfishTimeoutMs,
+    proxyEnabled: tinyfishProxyEnabled,
+    proxyCountry: tinyfishProxyCountry,
   },
   policy: {
     maxStepsPerTurn: Number.isNaN(policyMaxSteps) ? 8 : policyMaxSteps,
@@ -937,6 +953,10 @@ function reloadConfig() {
   config.modelProvider.fallbackEnabled = process.env.FALLBACK_ENABLED !== "false";
   config.modelProvider.fallbackProvider = (process.env.FALLBACK_PROVIDER ?? "databricks").toLowerCase();
   config.modelProvider.suggestionModeModel = (process.env.SUGGESTION_MODE_MODEL ?? "default").trim();
+
+  // TinyFish config reload
+  config.tinyfish.apiKey = process.env.TINYFISH_API_KEY?.trim() || null;
+  config.tinyfish.browserProfile = process.env.TINYFISH_BROWSER_PROFILE?.trim() || "lite";
 
   config.toon.enabled = process.env.TOON_ENABLED === "true";
   const newToonMinBytes = Number.parseInt(process.env.TOON_MIN_BYTES ?? "4096", 10);

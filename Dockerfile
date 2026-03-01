@@ -153,6 +153,11 @@ ENV ZAI_API_KEY="" \
 ENV VERTEX_API_KEY="" \
     VERTEX_MODEL="gemini-2.0-flash"
 
+# Moonshot AI (Kimi) Configuration (optional)
+ENV MOONSHOT_API_KEY="" \
+    MOONSHOT_ENDPOINT="https://api.moonshot.ai/v1/chat/completions" \
+    MOONSHOT_MODEL="kimi-k2-thinking"
+
 # Embeddings Provider Override (optional)
 ENV EMBEDDINGS_PROVIDER=""
 
@@ -173,6 +178,15 @@ ENV WEB_SEARCH_ALLOW_ALL="true" \
     WEB_FETCH_BODY_PREVIEW_MAX="10000" \
     WEB_SEARCH_RETRY_ENABLED="true" \
     WEB_SEARCH_MAX_RETRIES="2"
+
+# TinyFish AI Browser Automation (WebAgent tool)
+# Get your API key from: https://tinyfish.ai
+ENV TINYFISH_API_KEY="" \
+    TINYFISH_ENDPOINT="https://agent.tinyfish.ai/v1/automation/run-sse" \
+    TINYFISH_BROWSER_PROFILE="lite" \
+    TINYFISH_TIMEOUT_MS="120000" \
+    TINYFISH_PROXY_ENABLED="false" \
+    TINYFISH_PROXY_COUNTRY="US"
 
 # Policy Configuration
 ENV POLICY_MAX_STEPS="20" \

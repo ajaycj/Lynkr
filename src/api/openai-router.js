@@ -126,6 +126,13 @@ const CLIENT_TOOL_MAPPINGS = {
       mapArgs: (a) => ({
         query: a.query || ""
       })
+    },
+    "WebAgent": {
+      name: "web_agent",
+      mapArgs: (a) => ({
+        url: a.url || "",
+        goal: a.goal || ""
+      })
     }
   },
 
@@ -180,6 +187,13 @@ const CLIENT_TOOL_MAPPINGS = {
       mapArgs: (a) => ({
         path: a.path || a.directory || ".",
         recursive: false
+      })
+    },
+    "WebAgent": {
+      name: "web_agent",
+      mapArgs: (a) => ({
+        url: a.url || "",
+        goal: a.goal || ""
       })
     }
   },
@@ -237,6 +251,13 @@ const CLIENT_TOOL_MAPPINGS = {
         path: a.path || a.directory || ".",
         recursive: false
       })
+    },
+    "WebAgent": {
+      name: "web_agent",
+      mapArgs: (a) => ({
+        url: a.url || "",
+        goal: a.goal || ""
+      })
     }
   },
 
@@ -286,6 +307,13 @@ const CLIENT_TOOL_MAPPINGS = {
       name: "read_file",
       mapArgs: (a) => ({
         filepath: a.path || a.directory || "."
+      })
+    },
+    "WebAgent": {
+      name: "web_agent",
+      mapArgs: (a) => ({
+        url: a.url || "",
+        goal: a.goal || ""
       })
     }
   }
